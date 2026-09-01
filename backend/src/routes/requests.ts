@@ -8,6 +8,12 @@ const router = Router();
 router.post('/', requireAuth, async (req, res) => {
   const { gameId } = req.body as { gameId?: string };
   if (!gameId) return res.status(400).json({ error: 'gameId is required' });
+  
+  // Validate gameId is a valid UUID format
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(gameId)) {
+    return res.status(400).json({ error: 'Invalid gameId format' });
+  }
 
   try {
     const game = await pool.query('SELECT id FROM games WHERE id = $1', [gameId]);
@@ -43,13 +49,32 @@ router.get('/mine/:gameId', requireAuth, async (req, res) => {
   }
 });
 
+// Return the signed-in player's latest request per game so the lobby can
+// update all cards with one request instead of one lookup per game.
+router.get('/mine', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT DISTINCT ON (r.game_id) r.id, r.game_id, r.status, g.slug AS game_slug
+        FROM access_requests r
+        JOIN games g ON g.id = r.game_id
+        WHERE r.user_id = $1
+        ORDER BY r.game_id, r.created_at DESC`,
+      [req.user!.userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load your requests' });
+  }
+});
+
 // Poll a request's status — used by the player's status page.
 // Scoped to the signed-in owner so one player can't read another's ticket.
 router.get('/:id', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT r.id, r.status, r.username, r.password, r.created_at, r.fulfilled_at,
-              g.title AS game_title, g.slug AS game_slug, g.icon AS game_icon, g.genre AS game_genre,
+              g.id AS game_id, g.title AS game_title, g.slug AS game_slug, g.icon AS game_icon, g.genre AS game_genre,
               g.play_url, g.download_url
        FROM access_requests r
        JOIN games g ON g.id = r.game_id
@@ -61,6 +86,28 @@ router.get('/:id', requireAuth, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch request' });
+  }
+});
+
+// Look up the signed-in player's request for a specific game by slug.
+// Used by the friendly /games/:gameSlug route.
+router.get('/by-game/:gameSlug', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT r.id, r.status, r.username, r.password, r.created_at, r.fulfilled_at,
+              g.id AS game_id, g.title AS game_title, g.slug AS game_slug, g.icon AS game_icon, g.genre AS game_genre,
+              g.play_url, g.download_url
+       FROM access_requests r
+       JOIN games g ON g.id = r.game_id
+       WHERE g.slug = $1 AND r.user_id = $2
+       ORDER BY r.created_at DESC LIMIT 1`,
+      [req.params.gameSlug, req.user!.userId]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Request not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch request by game slug' });
   }
 });
 

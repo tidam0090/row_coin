@@ -4,11 +4,18 @@ services:
     image: postgres:16
     environment:
       POSTGRES_USER: coinrow
-      POSTGRES_PASSWORD: coinrow
+      # ⚠️ CHANGE THIS PASSWORD in production!
+      POSTGRES_PASSWORD: 0388494becdffcfa0ba39facb3f23079
       POSTGRES_DB: coinrow
     ports:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    # Add resource limits for safety
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
 volumes:
   db_data:

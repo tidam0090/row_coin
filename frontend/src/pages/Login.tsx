@@ -31,11 +31,6 @@ export default function Login() {
           <div className="eyebrow">WELCOME BACK</div>
           <h1>Jackpot entry awaits</h1>
           <p>Sign in to access premium games and unlock free-play sessions.</p>
-          <div className="hero-badges">
-            <span>Instant access</span>
-            <span>No deposit</span>
-            <span>Safe play</span>
-          </div>
         </div>
       </div>
 
@@ -76,6 +71,8 @@ export default function Login() {
 
         <div className="auth-footer">
           New here? <Link to="/register">Create an account</Link>
+          <span className="auth-footer-divider">·</span>
+          <Link to="/forgot-password">Forgot password?</Link>
         </div>
       </div>
     </div>

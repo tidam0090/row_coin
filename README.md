@@ -26,7 +26,7 @@ native install, Neon, Supabase, whatever.)
 cd backend
 cp .env.example .env      # set ADMIN_KEY and JWT_SECRET to long random strings
 npm install
-npm run migrate           # creates tables + seeds 6 placeholder games
+npm run migrate           # creates tables + seeds 18 placeholder games
 npm run dev                # http://localhost:4000
 ```
 

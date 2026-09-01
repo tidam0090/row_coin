@@ -4,59 +4,48 @@ import type { AuthUser } from './types';
 
 interface AuthContextValue {
   user: AuthUser | null;
-  token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, username: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const TOKEN_KEY = 'coinrow_token';
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+    // On mount, check if user is logged in by calling api.me()
+    // This will succeed if the httpOnly cookie exists, fail otherwise
     api
-      .me(token)
+      .me()
       .then(({ user }) => setUser(user))
-      .catch(() => {
-        localStorage.removeItem(TOKEN_KEY);
-        setToken(null);
-      })
+      .catch(() => setUser(null))
       .finally(() => setLoading(false));
-  }, [token]);
+  }, []);
 
   async function login(email: string, password: string) {
-    const { token, user } = await api.login(email, password);
-    localStorage.setItem(TOKEN_KEY, token);
-    setToken(token);
+    const { user } = await api.login(email, password);
+    // Token is now automatically stored as httpOnly cookie by the server
     setUser(user);
   }
 
   async function register(email: string, username: string, password: string) {
-    const { token, user } = await api.register(email, username, password);
-    localStorage.setItem(TOKEN_KEY, token);
-    setToken(token);
+    const { user } = await api.register(email, username, password);
+    // Token is now automatically stored as httpOnly cookie by the server
     setUser(user);
   }
 
-  function logout() {
-    localStorage.removeItem(TOKEN_KEY);
-    setToken(null);
+  async function logout() {
+    await api.logout();
+    // Cookie is cleared by the server
     setUser(null);
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
