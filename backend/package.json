@@ -2,11 +2,11 @@
   "name": "coin-row-backend",
   "version": "1.0.0",
   "private": true,
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node dist/src/index.js",
     "migrate": "ts-node scripts/migrate.ts"
   },
   "dependencies": {
