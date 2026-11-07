@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { pool } from '../db';
-import { adminAuth } from '../middleware/adminAuth';
+import { requireAuth } from '../middleware/requireAuth';
+import { requireAdmin } from '../middleware/requireAdmin';
 
 const router = Router();
-router.use(adminAuth);
+router.use(requireAuth, requireAdmin);
 
 router.get('/payment-methods', async (_req, res) => {
   try {

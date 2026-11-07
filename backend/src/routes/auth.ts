@@ -6,6 +6,7 @@ import { pool } from '../db';
 import { signToken } from '../auth';
 import { requireAuth } from '../middleware/requireAuth';
 import { sendPasswordResetEmail } from '../email';
+import { resolveUserRoleByEmail } from '../userRoles';
 
 const router = Router();
 
@@ -17,6 +18,15 @@ const authAttemptLimiter = rateLimit({
 });
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function toPublicUser(user: { id: string; email: string; username: string }) {
+  return {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    role: resolveUserRoleByEmail(user.email),
+  };
+}
 
 router.post('/register', authAttemptLimiter, async (req, res) => {
   const { email, username, password } = req.body as {
@@ -64,7 +74,7 @@ router.post('/register', authAttemptLimiter, async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
     
-    res.status(201).json({ user: { id: user.id, email: user.email, username: user.username } });
+    res.status(201).json({ user: toPublicUser(user) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Could not create account' });
@@ -99,7 +109,7 @@ router.post('/login', authAttemptLimiter, async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
     
-    res.json({ user: { id: user.id, email: user.email, username: user.username } });
+    res.json({ user: toPublicUser(user) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Could not sign in' });
@@ -112,7 +122,7 @@ router.get('/me', requireAuth, async (req, res) => {
       req.user!.userId,
     ]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'User not found' });
-    res.json({ user: result.rows[0] });
+    res.json({ user: toPublicUser(result.rows[0]) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Could not load profile' });

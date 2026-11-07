@@ -11,16 +11,21 @@ import requestsRouter from './routes/requests';
 import walletRouter from './routes/wallet';
 import adminRouter from './routes/admin';
 import { requestIdMiddleware, securityHeadersMiddleware, enforceHttps } from './middleware/security';
+import { hasConfiguredAdminEmails } from './userRoles';
 
 dotenv.config();
 
 // Validate required environment variables
-const requiredEnvVars = ['JWT_SECRET', 'ADMIN_KEY', 'CORS_ORIGIN'];
+const requiredEnvVars = ['JWT_SECRET', 'CORS_ORIGIN'];
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
     console.error(`❌ ERROR: Required environment variable "${envVar}" is not set`);
     process.exit(1);
   }
+}
+
+if (!hasConfiguredAdminEmails()) {
+  console.warn('⚠️ No admin emails configured. Set ADMIN_EMAILS or ADMIN_EMAIL to enable admin access.');
 }
 
 const app = express();

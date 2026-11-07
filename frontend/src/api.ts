@@ -1,17 +1,24 @@
-import type { Game, AccessRequest, AdminRequestRow, AuthUser, PaymentMethodConfig, WalletRequestRow, WalletHistoryRow } from './types';
+import type {
+  AccessRequest,
+  AdminRequestRow,
+  AuthUser,
+  Game,
+  PaymentMethodConfig,
+  WalletHistoryRow,
+  WalletRequestRow,
+} from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
-const REQUEST_TIMEOUT = 10000; // 10 second timeout
+const REQUEST_TIMEOUT = 10000;
 
-// Helper to add timeout to fetch requests
 function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
   return fetch(url, {
     ...options,
-    credentials: 'include', // Send cookies with every request
-    signal: controller.signal
+    credentials: 'include',
+    signal: controller.signal,
   }).finally(() => {
     clearTimeout(timeoutId);
   });
@@ -23,10 +30,6 @@ async function handle<T>(res: Response): Promise<T> {
     throw new Error(body.error || `Request failed (${res.status})`);
   }
   return res.json() as Promise<T>;
-}
-
-function authHeaders(token: string): HeadersInit {
-  return { Authorization: `Bearer ${token}` };
 }
 
 export const api = {
@@ -97,58 +100,62 @@ export const api = {
       handle<AccessRequest>(r)
     ),
 
-  adminCheck: (key: string) =>
-    fetchWithTimeout(`${API_URL}/admin/check`, { headers: { 'x-admin-key': key } }).then((r) =>
+  adminCheck: () =>
+    fetchWithTimeout(`${API_URL}/admin/check`).then((r) =>
       handle<{ ok: boolean }>(r)
     ),
 
-  adminListRequests: (key: string, status?: 'pending' | 'fulfilled') =>
-    fetchWithTimeout(`${API_URL}/admin/requests${status ? `?status=${status}` : ''}`, {
-      headers: { 'x-admin-key': key },
-    }).then((r) => handle<AdminRequestRow[]>(r)),
+  adminListRequests: (status?: 'pending' | 'fulfilled') =>
+    fetchWithTimeout(`${API_URL}/admin/requests${status ? `?status=${status}` : ''}`).then((r) =>
+      handle<AdminRequestRow[]>(r)
+    ),
 
-  adminFulfill: (key: string, id: string, username: string, password: string) =>
+  adminFulfill: (id: string, username: string, password: string) =>
     fetchWithTimeout(`${API_URL}/admin/requests/${id}/fulfill`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-admin-key': key },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     }).then((r) => handle<unknown>(r)),
 
-  adminListPaymentMethods: (key: string) =>
-    fetchWithTimeout(`${API_URL}/admin/payment-methods`, {
-      headers: { 'x-admin-key': key },
-    }).then((r) => handle<PaymentMethodConfig[]>(r)),
+  adminListPaymentMethods: () =>
+    fetchWithTimeout(`${API_URL}/admin/payment-methods`).then((r) => handle<PaymentMethodConfig[]>(r)),
 
-  adminUpdatePaymentMethod: (key: string, code: string, payload: Partial<PaymentMethodConfig>) =>
+  adminUpdatePaymentMethod: (code: string, payload: Partial<PaymentMethodConfig>) =>
     fetchWithTimeout(`${API_URL}/admin/payment-methods/${code}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'x-admin-key': key },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     }).then((r) => handle<PaymentMethodConfig>(r)),
 
-  adminListWalletRequests: (key: string, status?: 'pending' | 'approved' | 'cancelled') =>
-    fetchWithTimeout(`${API_URL}/admin/wallet-requests${status ? `?status=${status}` : ''}`, {
-      headers: { 'x-admin-key': key },
-    }).then((r) => handle<WalletRequestRow[]>(r)),
+  adminListWalletRequests: (status?: 'pending' | 'approved' | 'cancelled') =>
+    fetchWithTimeout(`${API_URL}/admin/wallet-requests${status ? `?status=${status}` : ''}`).then((r) =>
+      handle<WalletRequestRow[]>(r)
+    ),
 
-  adminApproveWalletRequest: (key: string, id: string, note?: string) =>
+  adminApproveWalletRequest: (id: string, note?: string) =>
     fetchWithTimeout(`${API_URL}/admin/wallet-requests/${id}/approve`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-admin-key': key },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ note }),
     }).then((r) => handle<unknown>(r)),
 
-  adminCancelWalletRequest: (key: string, id: string, note?: string) =>
+  adminCancelWalletRequest: (id: string, note?: string) =>
     fetchWithTimeout(`${API_URL}/admin/wallet-requests/${id}/cancel`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-admin-key': key },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ note }),
     }).then((r) => handle<unknown>(r)),
 
   getPaymentMethods: () =>
     fetchWithTimeout(`${API_URL}/wallet/payment-methods`).then((r) => handle<PaymentMethodConfig[]>(r)),
 
-  createWalletRequest: (payload: { gameId: string; type: 'deposit' | 'withdrawal'; amount: number; paymentMethod: string; details?: Record<string, unknown> }) =>
+  createWalletRequest: (payload: {
+    gameId: string;
+    type: 'deposit' | 'withdrawal';
+    amount: number;
+    paymentMethod: string;
+    details?: Record<string, unknown>;
+  }) =>
     fetchWithTimeout(`${API_URL}/wallet/requests`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
