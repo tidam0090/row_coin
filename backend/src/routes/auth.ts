@@ -10,14 +10,6 @@ import { resolveUserRoleByEmail } from '../userRoles';
 
 const router = Router();
 
-const authCookieOptions = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  // The frontend may run on localhost while the API is hosted on Render.
-  // Cross-site fetches need SameSite=None, and browsers require Secure with it.
-  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-} as const;
-
 const authAttemptLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
@@ -76,7 +68,9 @@ router.post('/register', authAttemptLimiter, async (req, res) => {
     
     // Set httpOnly cookie (more secure than localStorage)
     res.cookie('token', token, {
-      ...authCookieOptions,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
     
@@ -109,7 +103,9 @@ router.post('/login', authAttemptLimiter, async (req, res) => {
     
     // Set httpOnly cookie (more secure than localStorage)
     res.cookie('token', token, {
-      ...authCookieOptions,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
     
@@ -135,7 +131,11 @@ router.get('/me', requireAuth, async (req, res) => {
 
 router.post('/logout', (_req, res) => {
   // Clear the httpOnly cookie
-  res.clearCookie('token', authCookieOptions);
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax'
+  });
   res.json({ success: true });
 });
 
